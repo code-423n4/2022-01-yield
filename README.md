@@ -58,7 +58,7 @@ Under "SPONSORS ADD INFO HERE" heading below, include the following:
 
 ---
 
-# Yield contest details
+# Yield-Convex contest details
 - $25,650 USDC main award pot
 - $1,350 USDC gas optimization award pot
 - Join [C4 Discord](https://discord.gg/code4rena) to register
