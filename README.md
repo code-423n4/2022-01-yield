@@ -89,18 +89,18 @@ Similar the process of repaying the debt also changes.
    2. Initiate pouring action to repay the debt
    3. Unwrap the wrapped token and transfer them to the user
 
-### Design choice
+## Design choice
 
-## Permissionless wrap/unwrap
+### Permissionless wrap/unwrap
 
 To keep things simple for the user we went ahead with a permissionless wrapping & unwrapping. This however, makes the function exploitable. Here is an example of how it could be exploited:
 
 1. User A transfers their convex token to wrapper contract
-2. User B immediately calls the wrap function passing their address for both to* & from* as a result they would end up receiving the wrapped convex token of user A which they can unwrap by calling unwrap function.
+2. User B immediately calls the wrap function passing their address for both to & from as a result they would end up receiving the wrapped convex token of user A which they can unwrap by calling unwrap function.
 
 Despite the above exploit we are still moving ahead with the design as we perform the wrapping and unwrapping only in batch calls which ensures that during a transaction the above exploit cannot happen.
 
-## Setting user vaults to 0 in removeVault
+### Setting user vaults to 0 in removeVault
 
 Removing the vaultId from the array would be an expensive affair and there is not a lot of gas savings due to its removal in the getDepositedBalance function. Hence, we decided to move ahead with not removing the element from the array.
 
