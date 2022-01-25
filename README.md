@@ -28,8 +28,10 @@ Adapted convex wrapper contract upgraded to use solidity 0.8.6.
 1. convexBooster: 0xF403C135812408BFbE8713b5A23a04b3D48AAE31
 2. crv: 0xD533a949740bb3306d119CC777fa900bA034cd52
 3. cvx: 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B
-   Libraries:
-4. @yield-protocol/utils-v2
+
+#### Libraries
+
+1. @yield-protocol/utils-v2
 
 ### ConvexYieldWrapper.sol (88 sloc)
 
@@ -41,8 +43,10 @@ A wrapper contract inheriting from ConvexStakingWrapper above with a way to calc
 2. cvx3CRV: 0x30d9410ed1d5da1f6c8391af5338c93ab8d4035c
 3. BaseRewardPool: 0x689440f2Ff927E1f24c72F1087E1FAF471eCe1c8
 4. Cauldron: 0xc88191F8cb8e6D4a668B047c1C8503432c3Ca867
-   Libraries:
-5. @yield-protocol/vault-interfaces
+
+#### Libraries
+
+1. @yield-protocol/vault-interfaces
 
 ### Cvx3CrvOracle.sol (70 sloc)
 
@@ -54,9 +58,11 @@ A simple oracle contract that provides 3CRV/ETH price feed
 2. DAI/ETH Chainlink: 0x773616E4d11A78F511299002da57A0a94577F1f4
 3. USDC/ETH Chainlink: 0x986b5E1e1755e3C2440e960477f25201B0a8bbD4
 4. USDT/ETH Chainlink: 0xEe9F2375b4bdF6387aa8265dD4FB8F16512A1d46
-   Libraries:
-5. @yield-protocol/utils-v2
-6. @yield-protocol/vault-interfaces
+
+#### Libraries
+
+1. @yield-protocol/utils-v2
+2. @yield-protocol/vault-interfaces
 
 ## Areas of concern
 
