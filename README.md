@@ -15,6 +15,12 @@ This repo will be made public before the start of the contest. (C4 delete this l
 Yield v2 is a collateralized debt engine paired with a custom automated market maker.
 We aim to provide our users a way to use their convex tokens as a collateral and at the same time let the accrue rewards they would have received for staking the convex token with convex finance.
 
+### Implementation Decisions
+
+To provide our users a way to use their token as a collateral and at the same time be able to claim rewards there needs to be a way which would allow the tokens to be staked on behalf of the users.
+During our research we came across Abracadabra which provides their user a similar facility and thats how we came across [this contract](https://etherscan.io/address/0xd92494CB921E5C0d3A39eA88d0147bbd82E51008). We choose to move ahead with this contract as it satisfied our requirements and was being used successfully on a live project.
+To comply with our existing contracts we choose to migrate [the contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) from 0.6.12 to 0.8.6. This lead to removal of safemath. We also choose to move ahead with using our own [ERC20 library](https://www.npmjs.com/package/@yield-protocol/utils-v2) and not using openzeppelin to make it lighter.
+
 ## Smart Contracts
 
 There are 3 smart contracts that are in the scope:
@@ -64,6 +70,40 @@ A simple oracle contract that provides 3CRV/ETH price feed
 1. [@yield-protocol/utils-v2](https://www.npmjs.com/package/@yield-protocol/utils-v2)
 2. [@yield-protocol/vault-interfaces](https://www.npmjs.com/package/@yield-protocol/vault-interfaces)
 
-## Areas of concern
+### How does it work with Yield protocol?
+
+For a token to be used as a collateral, yield protocol requires them to be trasferred to a dedicated join and then perform borrowing/depositing action.
+Since, we are wrapping the token we first the steps that are followed changes. So, rather than transferring them directly to the Join & pouring it goes as follows:
+
+1. User approves the ladle to spend a specified amount of convex token
+2. User initiates a batch call which does the following:
+   1. Transfer the convex token from user to the wrapper contract
+   2. Wrap the token and transfer the wrapped token to the specified join
+   3. Perform the pouring action
+
+Similar the process of repaying the debt also changes.
+
+1. User transfers the fyTokens
+2. User initiates a batch call which does the following:
+   1. Call `user_checkpoint` on wrapper to checkpoint the user's balance
+   2. Initiate pouring action to repay the debt
+   3. Unwrap the wrapped token and transfer them to the user
+
+### Design choice
+
+## Permissionless wrap/unwrap
+
+To keep things simple for the user we went ahead with a permissionless wrapping & unwrapping. This however, makes the function exploitable. Here is an example of how it could be exploited:
+
+1. User A transfers their convex token to wrapper contract
+2. User B immediately calls the wrap function passing their address for both to* & from* as a result they would end up receiving the wrapped convex token of user A which they can unwrap by calling unwrap function.
+
+Despite the above exploit we are still moving ahead with the design as we perform the wrapping and unwrapping only in batch calls which ensures that during a transaction the above exploit cannot happen.
+
+## Setting user vaults to 0 in removeVault
+
+Removing the vaultId from the array would be an expensive affair and there is not a lot of gas savings due to its removal in the getDepositedBalance function. Hence, we decided to move ahead with not removing the element from the array.
+
+# Areas of concern
 
 The major area of concern is the math in the ConvexStakingWrapper that has been modified to not use the safe math as solidity version was upgraded. And also the ERC20 library used was changed from openzeppelin to yield-protocol/utils-v2.
