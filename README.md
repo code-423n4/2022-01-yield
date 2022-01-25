@@ -19,7 +19,7 @@ Some of the checklists in this doc are for **C4 (🐺)** and some of them are fo
 Under "SPONSORS ADD INFO HERE" heading below, include the following:
 
 - [ ] Name of each contract and:
-  - [ ] lines of code in each
+  - [ ] source lines of code (excluding blank lines and comments) in each
   - [ ] external contracts called in each
   - [ ] libraries used in each
 - [ ] Describe any novel or unique curve logic or mathematical models implemented in the contracts
