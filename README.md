@@ -12,22 +12,23 @@ This repo will be made public before the start of the contest. (C4 delete this l
 
 # Contest scoping
 
-Yield v2 is a collateralized debt engine paired with a custom automated market maker.
+Yield v2 is a collateralized debt engine paired with a custom automated market maker, using a novel transaction building pattern.
+
 We aim to provide our users a way to use their convex tokens as a collateral and at the same time let the accrue rewards they would have received for staking the convex token with convex finance.
 
-### Implementation Decisions
-
-To provide our users a way to use their token as a collateral and at the same time be able to claim rewards there needs to be a way which would allow the tokens to be staked on behalf of the users.
-During our research we came across Abracadabra which provides their user a similar facility and thats how we came across [this contract](https://etherscan.io/address/0xd92494CB921E5C0d3A39eA88d0147bbd82E51008). We choose to move ahead with this contract as it satisfied our requirements and was being used successfully on a live project.
-To comply with our existing contracts we choose to migrate [the contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) from 0.6.12 to 0.8.6. This lead to removal of safemath. We also choose to move ahead with using our own [ERC20 library](https://www.npmjs.com/package/@yield-protocol/utils-v2) and not using openzeppelin to make it lighter.
+Abracadabra provides a [similar facility](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) which we have updated to use [our dependencies](https://www.npmjs.com/package/@yield-protocol/utils-v2), including a solidity compiler update from 0.6.12 to 0.8.6. Then that contract was extended through inheritance with the new functionality that is needed for integration with the Yield Protocol.
 
 ## Smart Contracts
 
-There are 3 smart contracts that are in the scope:
+There are 4 smart contracts in scope:
+
+### ConvexModule.sol (35 sloc)
+
+A Ladle [module](https://github.com/yieldprotocol/vault-v2/blob/561ae9e9b2ee72ea9d43e77ed1a0c1ad3cb4b54f/contracts/Ladle.sol#L192) that allows Ladle batches to include calls to add or remove vaults from the ConvexYieldWrapper registry.
 
 ### ConvexStakingWrapper.sol (295 sloc)
 
-A wrapper contract which wraps convex token and stakes the convex token on user's behalf & allow them to claim rewards. This is an adapted [convex wrapper contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) upgraded to use solidity 0.8.6.
+A wrapper contract which wraps convex tokens and stakes them on user's behalf, allowing them to claim rewards. This is an adapted [convex wrapper contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) upgraded to use solidity 0.8.6 and the standard Yield Protocol dependencies.
 
 #### External contracts called
 
@@ -41,7 +42,7 @@ A wrapper contract which wraps convex token and stakes the convex token on user'
 
 ### ConvexYieldWrapper.sol (88 sloc)
 
-A wrapper contract inheriting from ConvexStakingWrapper above with a way to calculate user balance from amount deposited in Join.
+A wrapper contract inheriting from ConvexStakingWrapper above with a way to calculate the aggregate user balance from the vaults owned in the [Cauldron](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/Cauldron.sol).
 
 #### External contracts called
 
@@ -56,7 +57,7 @@ A wrapper contract inheriting from ConvexStakingWrapper above with a way to calc
 
 ### Cvx3CrvOracle.sol (70 sloc)
 
-A simple oracle contract that provides 3CRV/ETH price feed
+A simple oracle contract that provides 3CRV/ETH price feed conforming to the interface and patterns from the audited [Yield Oracles](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/oracles/chainlink/ChainlinkMultiOracle.sol).
 
 #### External contracts called
 
@@ -70,35 +71,62 @@ A simple oracle contract that provides 3CRV/ETH price feed
 1. [@yield-protocol/utils-v2](https://www.npmjs.com/package/@yield-protocol/utils-v2)
 2. [@yield-protocol/vault-interfaces](https://www.npmjs.com/package/@yield-protocol/vault-interfaces)
 
-### How does it work with Yield protocol?
+### General Usage of the Contracts
 
-For a token to be used as a collateral, yield protocol requires them to be trasferred to a dedicated join and then perform borrowing/depositing action.
-Since, we are wrapping the token we first the steps that are followed changes. So, rather than transferring them directly to the Join & pouring it goes as follows:
+For a generic token to be used as a collateral, yield protocol requires them to be trasferred to a dedicated Join contract and then perform a depositing and borrowing action. This is all orchestrated through the [Ladle](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/Ladle.sol) is a batch of at least three steps.
+   1. Approve the Ladle to move the collateral (permit)
+   2. Move the collateral to the appropriate Join (transfer)
+   3. Update accounting and produce debt tokens (pour)
 
-1. User approves the ladle to spend a specified amount of convex token
-2. User initiates a batch call which does the following:
-   1. Transfer the convex token from user to the wrapper contract
-   2. Wrap the token and transfer the wrapped token to the specified join
-   3. Perform the pouring action
+Similarly, the repayment of debt is done in a batch through the Ladle.
+   1. Approve the Ladle to move the debt tokens (permit)
+   2. Move the debt tokens to the debt token contract (transfer)
+   3. Update accounting, burn debt tokens and transfer out collateral (pour)
+   
+To enable Convex as a collateral we need to wrap it in an ERC20 that stakes it and keeps track of who was the original owner of the Convex tokens, which vaults do they own in the yield Protocol, and the rewards that are owed at each point in time.
 
-Similar the process of repaying the debt also changes.
+The `ConvexYieldWrapper` contract includes `addVault` and `removeVault` functions to allow it to keep a lazily updated list of vaults that are owned by a given user. The `ConvexModule` contract adds the functionality to the Ladle to call these functions via the `addModule` and `moduleCall` functions in the Ladle. This integration mode is required so that the vaultId can be known in the same transaction that is created.
 
-1. User transfers the fyTokens
-2. User initiates a batch call which does the following:
-   1. Call `user_checkpoint` on wrapper to checkpoint the user's balance
-   2. Initiate pouring action to repay the debt
-   3. Unwrap the wrapped token and transfer them to the user
+As a further explanation for this, vaultIds are not deterministic and is not possible to know them in advance. To be able to include in batches vaults that have been created in the same transaction, zero can be passed as the `vaultId` and the Ladle will use a vault created in the same batch, if it exists. Since this cached vaultId resides in the LadleStorage for the duration of a transaction, it can be accessed by modules.
 
-## Design choice
+Therefore, to borrow with Convex collateral, staking it in the process, the user will execute through the Ladle a batch like follows:
+   1. Approve the Ladle to move the convex collateral (permit)
+   2. Move the collateral to the ConvexYieldWrapper (transfer)
+   3. Wrap the convex into wrappedConvex and send it to the appropriate Join. This checkpoints rewards.
+   4. If necessary, add the vault to the vaults owned by the user in the Wrapper contract.
+   5. Update accounting and produce debt tokens (pour)
 
-### Permissionless wrap/unwrap
+To repay a debt and withdraw Convex collateral, unstaking it in the process, the user will execute this batch thorugh the Ladle:
+   1. Approve the Ladle to move the debt tokens (permit)
+   2. Move the debt tokens to the debt token contract (transfer)
 
-To keep things simple for the user we went ahead with a permissionless wrapping & unwrapping. This however, makes the function exploitable. Here is an example of how it could be exploited:
+(Maybe) Call user_checkpoint
 
-1. User A transfers their convex token to wrapper contract
-2. User B immediately calls the wrap function passing their address for both to & from as a result they would end up receiving the wrapped convex token of user A which they can unwrap by calling unwrap function.
+   3. Update accounting, burn debt tokens and transfer out collateral to the ConvexYieldWrapper (pour)
+   4. Unwrap the wrappedConvex and send the resulting convex to the user. This checkpoints rewards.
+   5. If desired, claim rewards from the ConvexYieldWrapper
 
-Despite the above exploit we are still moving ahead with the design as we perform the wrapping and unwrapping only in batch calls which ensures that during a transaction the above exploit cannot happen.
+## Design choices
+
+### Segregation of ConvexStakingWrapper
+
+To facilitate audit the original ConvexStakingWrapper has maintained the existing functionality, and all changes are limited to upgrades to integrate it with our codebase. New features are implemented in the ConvexYieldWrapper that inherits from it.
+
+### Governance testing
+
+All governance actions in the Yield Protocol are previously tested in blockchain forks and go through several layers of verification before committing them to the mainnet. Any check in smart contracts to verify that a governance change doesn't contain an error is considered superflous.
+
+### Interacting directly with smart contracts
+
+Users are not expected to interact directly with the smart contracts, and it is accepted that they might suffer a loss by doing so. The smart contracts must be interacted with in very specific ways, usually by batching a number of calls in the same transaction. Recipes for borrowing and repaying debt have been included in this README, although other recipes will be created in the future.
+
+The recipes for safe interaction are implemented in our approved frontends. Interacting with the smart contracts using an unapproved frontend might lead to a loss of assets and users are not advised to do so.
+
+However, what is never to be expected is that one user interacting with the smart contracts would cause a loss for a different user.
+
+### Adding and Removing vaults
+
+The design of vault addition and removal is intended so that the vault registry in the ConvexYieldWrapper can be updated by anyone. An update should only benefit an account, and never represent a loss. Losses to an account caused by that same account not adding or removing a vault when appropriate are accepted.
 
 ### Setting user vaults to 0 in removeVault
 
@@ -106,4 +134,4 @@ Removing the vaultId from the array would be an expensive affair and there is no
 
 # Areas of concern
 
-The major area of concern is the math in the ConvexStakingWrapper that has been modified to not use the safe math as solidity version was upgraded. And also the ERC20 library used was changed from openzeppelin to yield-protocol/utils-v2.
+The major area of concern is the math in the ConvexStakingWrapper that has been modified to not use the safe math as solidity version was upgraded. And also the ERC20 library used was changed from openzeppelin to yield-protocol/utils-v2. Mismanagement of vaults in the ConvexYieldWrapper is another area of concern.
