@@ -5,8 +5,8 @@ import "@yield-protocol/utils-v2/contracts/access/AccessControl.sol";
 import "@yield-protocol/vault-interfaces/IOracle.sol";
 import "@yield-protocol/utils-v2/contracts/cast/CastBytes32Bytes6.sol";
 
-import "./ICurvePool.sol";
-import "../chainlink/AggregatorV3Interface.sol";
+import "./interfaces/ICurvePool.sol";
+import "./interfaces/AggregatorV3Interface.sol";
 
 // Oracle Code Inspiration: https://github.com/Abracadabra-money/magic-internet-money/blob/main/contracts/oracles/3CrvOracle.sol
 /**
@@ -68,7 +68,13 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes32 base,
         bytes32 quote,
         uint256 baseAmount
-    ) external view virtual override returns (uint256 quoteAmount, uint256 updateTime) {
+    )
+        external
+        view
+        virtual
+        override
+        returns (uint256 quoteAmount, uint256 updateTime)
+    {
         return _peek(base.b6(), quote.b6(), baseAmount);
     }
 
@@ -84,7 +90,12 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         bytes32 base,
         bytes32 quote,
         uint256 baseAmount
-    ) external virtual override returns (uint256 quoteAmount, uint256 updateTime) {
+    )
+        external
+        virtual
+        override
+        returns (uint256 quoteAmount, uint256 updateTime)
+    {
         return _peek(base.b6(), quote.b6(), baseAmount);
     }
 
@@ -102,17 +113,24 @@ contract Cvx3CrvOracle is IOracle, AccessControl {
         uint256 baseAmount
     ) private view returns (uint256 quoteAmount, uint256 updateTime) {
         require(
-            (base == ethId && quote == cvx3CrvId) || (base == cvx3CrvId && quote == ethId),
+            (base == ethId && quote == cvx3CrvId) ||
+                (base == cvx3CrvId && quote == ethId),
             "Invalid quote or base"
         );
         (, int256 daiPrice, , , ) = DAI.latestRoundData();
         (, int256 usdcPrice, , , ) = USDC.latestRoundData();
         (, int256 usdtPrice, , , ) = USDT.latestRoundData();
 
-        require(daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0, "Chainlink pricefeed reporting 0");
+        require(
+            daiPrice > 0 && usdcPrice > 0 && usdtPrice > 0,
+            "Chainlink pricefeed reporting 0"
+        );
 
         // This won't overflow as the max value for int256 is less than the max value for uint256
-        uint256 minStable = min(uint256(daiPrice), min(uint256(usdcPrice), uint256(usdtPrice)));
+        uint256 minStable = min(
+            uint256(daiPrice),
+            min(uint256(usdcPrice), uint256(usdtPrice))
+        );
 
         uint256 price = (threecrv.get_virtual_price() * minStable) / 1e18;
 
