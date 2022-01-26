@@ -149,7 +149,7 @@ The design of vault addition and removal is intended so that the vault registry 
 
 # Final notes
 
-## Intentional deviations from commonly sited "best practices"
+## Intentional deviations from commonly cited "best practices"
 - We intentionally do not check the validity of contract addresses using `isContract` or some other means.
 - We intentionally did not make use of custom errors in spite of the potential gas savings.
 - The length of each revert string is intentional and we do not wish to save gas by shortening them.
