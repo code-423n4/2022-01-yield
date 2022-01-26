@@ -12,7 +12,7 @@ This repo will be made public before the start of the contest. (C4 delete this l
 
 # Contest scoping
 
-Yield v2 is a [collateralized debt engine](https://github.com/yieldprotocol/vault-v2) paired with a [custom automated market maker](https://github.com/yieldprotocol/yieldspace-v2), using a (novel transaction building pattern)[https://github.com/yieldprotocol/vault-v2/blob/4401e570d578b341f56973ea044698479b4e358f/contracts/Ladle.sol#L170].
+Yield v2 is a [collateralized debt engine](https://github.com/yieldprotocol/vault-v2) paired with a [custom automated market maker](https://github.com/yieldprotocol/yieldspace-v2), using a [novel transaction building pattern](https://github.com/yieldprotocol/vault-v2/blob/4401e570d578b341f56973ea044698479b4e358f/contracts/Ladle.sol#L170).
 
 We aim to provide our users a way to use their convex tokens as a collateral and at the same time let the accrue rewards they would have received for staking the convex token with convex finance.
 
