@@ -14,7 +14,7 @@ This repo will be made public before the start of the contest. (C4 delete this l
 
 Yield v2 is a [collateralized debt engine](https://github.com/yieldprotocol/vault-v2) paired with a [custom automated market maker](https://github.com/yieldprotocol/yieldspace-v2), using a [novel transaction building pattern](https://github.com/yieldprotocol/vault-v2/blob/4401e570d578b341f56973ea044698479b4e358f/contracts/Ladle.sol#L170).
 
-We aim to provide our users a way to use their convex tokens as a collateral and at the same time let the accrue rewards they would have received for staking the convex token with convex finance.
+We intend to allow our users to use their convex tokens as a collateral and to claim the rewards for staking the convex token with convex finance accrued by those tokens, while deposited as collateral.
 
 Abracadabra provides a [similar facility](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) which we have updated to use [our dependencies](https://www.npmjs.com/package/@yield-protocol/utils-v2), including a solidity compiler update from 0.6.12 to 0.8.6. Then that contract was extended through inheritance with the new functionality that is needed for integration with the Yield Protocol.
 
