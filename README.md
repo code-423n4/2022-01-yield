@@ -12,7 +12,7 @@ This repo will be made public before the start of the contest. (C4 delete this l
 
 # Contest scoping
 
-Yield v2 is a collateralized debt engine paired with a custom automated market maker, using a novel transaction building pattern.
+Yield v2 is a [collateralized debt engine](https://github.com/yieldprotocol/vault-v2) paired with a [custom automated market maker](https://github.com/yieldprotocol/yieldspace-v2), using a (novel transaction building pattern)[https://github.com/yieldprotocol/vault-v2/blob/4401e570d578b341f56973ea044698479b4e358f/contracts/Ladle.sol#L170].
 
 We aim to provide our users a way to use their convex tokens as a collateral and at the same time let the accrue rewards they would have received for staking the convex token with convex finance.
 
@@ -92,19 +92,17 @@ As a further explanation for this, vaultIds are not deterministic and is not pos
 Therefore, to borrow with Convex collateral, staking it in the process, the user will execute through the Ladle a batch like follows:
    1. Approve the Ladle to move the convex collateral (permit)
    2. Move the collateral to the ConvexYieldWrapper (transfer)
-   3. Wrap the convex into wrappedConvex and send it to the appropriate Join. This checkpoints rewards.
-   4. If necessary, add the vault to the vaults owned by the user in the Wrapper contract.
+   3. Wrap the convex into wrappedConvex and send it to the appropriate Join. This checkpoints rewards (route)
+   4. If necessary, add the vault to the vaults owned by the user in the Wrapper contract (moduleCall)
    5. Update accounting and produce debt tokens (pour)
 
 To repay a debt and withdraw Convex collateral, unstaking it in the process, the user will execute this batch thorugh the Ladle:
    1. Approve the Ladle to move the debt tokens (permit)
-   2. Move the debt tokens to the debt token contract (transfer)
-
-(Maybe) Call user_checkpoint
-
-   3. Update accounting, burn debt tokens and transfer out collateral to the ConvexYieldWrapper (pour)
-   4. Unwrap the wrappedConvex and send the resulting convex to the user. This checkpoints rewards.
-   5. If desired, claim rewards from the ConvexYieldWrapper
+   2. Call user_checkpoint to update the user rewards before any transfer that would erase them (route)
+   3. Move the debt tokens to the debt token contract (transfer)
+   4. Update accounting, burn debt tokens and transfer out collateral to the ConvexYieldWrapper (pour)
+   5. Unwrap the wrappedConvex and send the resulting convex to the user. This checkpoints rewards. (route)
+   6. If desired, claim rewards from the ConvexYieldWrapper (route)
 
 ## Design choices
 
@@ -118,20 +116,38 @@ All governance actions in the Yield Protocol are previously tested in blockchain
 
 ### Interacting directly with smart contracts
 
-Users are not expected to interact directly with the smart contracts, and it is accepted that they might suffer a loss by doing so. The smart contracts must be interacted with in very specific ways, usually by batching a number of calls in the same transaction. Recipes for borrowing and repaying debt have been included in this README, although other recipes will be created in the future.
+Users are not expected to interact directly with the smart contracts, and it is accepted that they might suffer a loss by doing so. The smart contracts must be interacted with in very specific ways, usually by batching a number of calls in the same transaction. Recipes for borrowing and repaying debt have been included in this README, although other recipes exist and will be created in the future.
 
 The recipes for safe interaction are implemented in our approved frontends. Interacting with the smart contracts using an unapproved frontend might lead to a loss of assets and users are not advised to do so.
 
-However, what is never to be expected is that one user interacting with the smart contracts would cause a loss for a different user.
+However, what is never to be expected is that one user interacting with the smart contracts in any way could cause a loss for a different user.
 
 ### Adding and Removing vaults
 
-The design of vault addition and removal is intended so that the vault registry in the ConvexYieldWrapper can be updated by anyone. An update should only benefit an account, and never represent a loss. Losses to an account caused by that same account not adding or removing a vault when appropriate are accepted.
+The design of vault addition and removal is intended so that the vault registry in the ConvexYieldWrapper can be updated by anyone. An update should only benefit an account, and never represent a loss for the caller or the vault owner. Losses to an account caused by that same account failing to add or remove a vault when appropriate are accepted.
 
-### Setting user vaults to 0 in removeVault
+## Intentional deviations from best practices
+- We intentionally do not check validity of contract addresses using `isContract` or some other means.
+- We intentionally chose not to use Yul for minor gas savings in favor of readability.
+- We intentionally did not make use of custom errors in spite of the potential gas savings.
+- The length of each revert string is intentional and we do not wish to save gas by shortening them.
+- We intentionally did not apply "unchecked" to the incrementing of loop counter variables, preferring readability to small runtime gas savings.
+- Any "missing" address == 0 checks were intentionally omitted to save gas.
+- We have intentionally inlined as much logic as we care to and do not wish to save any additional runtime gas by inlining more.
+- We have abstracted as much logic as we care to and do not wish to reduce bytecode size to save deployment gas by abstracting more.
+-  In `Cvx3CrvOracle.sol`, `peek()` and `get()` both point to the same internal fn `_peek()`, however `get()` is transactional.  This is all done intentionally to emulate behavior of Yield oracles.
 
-Removing the vaultId from the array would be an expensive affair and there is not a lot of gas savings due to its removal in the getDepositedBalance function. Hence, we decided to move ahead with not removing the element from the array.
+## Naming conventions:
+- We intentionally use all-caps variable names instead of mixed case for state variables DAI, USDC, USDT, and IWETH9.
+- We intentionally use PascalCase for certain function names to be consistent with the [contracts](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapperAbra.sol) these were based on.
+- We intentionally use snake_case for certain variable names to be consistent with the [contracts](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapperAbra.sol) these were based on.
+- We intentionally use variable name `I` to represent integral to be consistent with the [contracts](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapperAbra.sol) these were based on.
+
+## NatSpec
+- We intentionally only include @notice and @dev comments for contracts and functions when we think it is helpful. If it is omitted, it is intentional.
 
 # Areas of concern
 
-The major area of concern is the math in the ConvexStakingWrapper that has been modified to not use the safe math as solidity version was upgraded. And also the ERC20 library used was changed from openzeppelin to yield-protocol/utils-v2. Mismanagement of vaults in the ConvexYieldWrapper is another area of concern.
+ - The math in the ConvexStakingWrapper that has been modified to not use the safe math as solidity version was upgraded.
+ - Mismanagement of vaults in the ConvexYieldWrapper.
+ - Math and decimals in `Cvx3CrvOracle._peek()`
