@@ -28,7 +28,7 @@ A Ladle [module](https://github.com/yieldprotocol/vault-v2/blob/561ae9e9b2ee72ea
 
 ### ConvexStakingWrapper.sol (295 sloc)
 
-A wrapper contract which wraps convex tokens and stakes them on user's behalf, allowing them to claim rewards. This is an adapted [convex wrapper contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) upgraded to use solidity 0.8.6 and the standard Yield Protocol dependencies.
+A wrapper contract for convex tokens that stakes them on user's behalf, allowing them to claim rewards. This is an adapted [convex wrapper contract](https://github.com/convex-eth/platform/blob/main/contracts/contracts/wrappers/ConvexStakingWrapper.sol) upgraded to use solidity 0.8.6 and the standard Yield Protocol dependencies.
 
 #### External contracts called
 
@@ -42,7 +42,7 @@ A wrapper contract which wraps convex tokens and stakes them on user's behalf, a
 
 ### ConvexYieldWrapper.sol (88 sloc)
 
-A wrapper contract inheriting from ConvexStakingWrapper above with a way to calculate the aggregate user balance from the vaults owned in the [Cauldron](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/Cauldron.sol).
+A wrapper contract inheriting from ConvexStakingWrapper that calculates an aggregated user balance from the all vaults owned by the same account in the [Cauldron](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/Cauldron.sol).
 
 #### External contracts called
 
@@ -57,7 +57,7 @@ A wrapper contract inheriting from ConvexStakingWrapper above with a way to calc
 
 ### Cvx3CrvOracle.sol (70 sloc)
 
-A simple oracle contract that provides 3CRV/ETH price feed conforming to the interface and patterns from the audited [Yield Oracles](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/oracles/chainlink/ChainlinkMultiOracle.sol).
+An oracle contract that provides a 3CRV/ETH price feed conforming to the interface and patterns from the audited [Yield Oracles](https://github.com/yieldprotocol/vault-v2/blob/master/contracts/oracles/chainlink/ChainlinkMultiOracle.sol).
 
 #### External contracts called
 
